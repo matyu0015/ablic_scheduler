@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       endTime,
       attendeeIds,
       customTitle,
-      customDescription,
+      customDescription: providedCustomDescription,
       customLocation,
     } = body;
 
@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 参加者名を取得（複数の場合は最初の1人）
-    const attendeeName = attendeeMembers[0]?.name || '様';
-
-    // 説明文を生成
-    const description = `${attendeeName}様
+    // 説明文を決定（カスタム文章が提供されていればそれを使用、なければデフォルトを生成）
+    let description = providedCustomDescription;
+    if (!description) {
+      const attendeeName = attendeeMembers[0]?.name || '様';
+      description = `${attendeeName}様
 
 お世話になっております。
 テクノブレーン黒田です。
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
 ご確認いただけますと幸いです。
 
 ${template.description || ''}`;
+    }
 
     // イベントを作成
     const result = await createCalendarEvent(
@@ -72,7 +73,7 @@ ${template.description || ''}`;
       'primary', // ログインユーザーのカレンダー
       {
         summary: customTitle || template.summary,
-        description: customDescription || description,
+        description: description,
         location: customLocation || template.location,
         start: new Date(startTime),
         end: new Date(endTime),

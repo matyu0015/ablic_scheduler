@@ -19,6 +19,7 @@ export default function Home() {
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [customDescription, setCustomDescription] = useState<string>('');
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers(prev =>
@@ -27,6 +28,59 @@ export default function Home() {
         : [...prev, memberId]
     );
   };
+
+  // テンプレート選択時に招待文章を生成
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    const template = eventTemplates.find(t => t.id === templateId);
+    if (template && selectedMembers.length > 0) {
+      const attendeeMember = sampleMembers.find(m => selectedMembers.includes(m.id));
+      const attendeeName = attendeeMember?.name || '様';
+      const description = `${attendeeName}様
+
+お世話になっております。
+テクノブレーン黒田です。
+
+以下日程で調整をさせていただきました。
+ご確認いただけますと幸いです。
+
+${template.description || ''}`;
+      setCustomDescription(description);
+    } else if (template) {
+      // 参加者が未選択の場合はデフォルトテキスト
+      const description = `様
+
+お世話になっております。
+テクノブレーン黒田です。
+
+以下日程で調整をさせていただきました。
+ご確認いただけますと幸いです。
+
+${template.description || ''}`;
+      setCustomDescription(description);
+    }
+  };
+
+  // 参加者が変更されたら招待文章を更新
+  useEffect(() => {
+    if (selectedTemplate && selectedMembers.length > 0) {
+      const template = eventTemplates.find(t => t.id === selectedTemplate);
+      if (template) {
+        const attendeeMember = sampleMembers.find(m => selectedMembers.includes(m.id));
+        const attendeeName = attendeeMember?.name || '様';
+        const description = `${attendeeName}様
+
+お世話になっております。
+テクノブレーン黒田です。
+
+以下日程で調整をさせていただきました。
+ご確認いただけますと幸いです。
+
+${template.description || ''}`;
+        setCustomDescription(description);
+      }
+    }
+  }, [selectedMembers]);
 
   // 空き状況を確認
   const checkAvailability = async () => {
@@ -96,6 +150,7 @@ export default function Home() {
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           attendeeIds: selectedMembers,
+          customDescription: customDescription,
         }),
       });
 
@@ -108,6 +163,7 @@ export default function Home() {
         setSelectedMembers([]);
         setSelectedTemplate('');
         setAvailability([]);
+        setCustomDescription('');
       } else {
         const error = await response.json();
         alert(`エラー: ${error.error}`);
@@ -321,7 +377,7 @@ export default function Home() {
                 {eventTemplates.map(template => (
                   <button
                     key={template.id}
-                    onClick={() => setSelectedTemplate(template.id)}
+                    onClick={() => handleTemplateSelect(template.id)}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       selectedTemplate === template.id
                         ? 'border-blue-500 bg-blue-50'
@@ -348,6 +404,25 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+
+              {/* 招待文章の編集エリア */}
+              {selectedTemplate && (
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    招待文章（編集可能）
+                  </label>
+                  <textarea
+                    value={customDescription}
+                    onChange={(e) => setCustomDescription(e.target.value)}
+                    rows={12}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                    placeholder="招待文章を入力してください..."
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    参加者名や学生さんの情報などを追加・編集できます
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
