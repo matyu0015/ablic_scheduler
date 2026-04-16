@@ -94,6 +94,13 @@ export async function createCalendarEvent(
   const calendar = getCalendarClient(accessToken);
 
   try {
+    const attendeesList = event.attendees?.map(email => ({ email }));
+    console.log('イベント作成リクエスト:');
+    console.log('- カレンダーID:', calendarId);
+    console.log('- 参加者（元）:', event.attendees);
+    console.log('- 参加者（変換後）:', attendeesList);
+    console.log('- sendUpdates:', 'all');
+
     const response = await calendar.events.insert({
       calendarId,
       sendUpdates: 'all', // 全参加者に通知
@@ -109,7 +116,7 @@ export async function createCalendarEvent(
           dateTime: event.end.toISOString(),
           timeZone: 'Asia/Tokyo',
         },
-        attendees: event.attendees?.map(email => ({ email })),
+        attendees: attendeesList,
         reminders: event.reminders
           ? {
               useDefault: false,
@@ -122,6 +129,11 @@ export async function createCalendarEvent(
         colorId: event.colorId,
       },
     });
+
+    console.log('イベント作成成功:');
+    console.log('- イベントID:', response.data.id);
+    console.log('- リンク:', response.data.htmlLink);
+    console.log('- 作成された参加者:', response.data.attendees);
 
     return {
       id: response.data.id,

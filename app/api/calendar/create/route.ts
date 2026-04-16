@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
     // attendeeIdsは実際にはカレンダーID（email）なので、そのまま使用
     const attendees = attendeeIds;
 
+    console.log('参加者リスト:', attendees);
+    console.log('参加者の型:', typeof attendees, Array.isArray(attendees));
+
     if (attendees.length === 0) {
       return NextResponse.json(
         { error: '参加者が見つかりません' },
