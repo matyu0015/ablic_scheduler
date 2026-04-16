@@ -87,4 +87,11 @@ export const sampleMembers: Member[] = [
     calendarId: 'takahashi@example.com',
     color: '#9E69AF',
   },
+  {
+    id: 'member-6',
+    name: '中目 日南子',
+    email: 'tohei0518@gmail.com',
+    calendarId: 'tohei0518@gmail.com',
+    color: '#D50000',
+  },
 ];
