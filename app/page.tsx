@@ -117,9 +117,9 @@ ${template.description || ''}`;
     }
   }, [selectedMembers, calendars]);
 
-  // 空き状況を確認
+  // 全カレンダーの空き状況を確認
   const checkAvailability = async () => {
-    if (selectedMembers.length === 0 || !session) return;
+    if (calendars.length === 0 || !session) return;
 
     setIsCheckingAvailability(true);
     try {
@@ -131,11 +131,13 @@ ${template.description || ''}`;
       const endTime = new Date(selectedDate);
       endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
 
+      // 全カレンダーの空き状況を確認
+      const allCalendarIds = calendars.map(c => c.id);
       const response = await fetch('/api/calendar/availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          memberIds: selectedMembers,
+          memberIds: allCalendarIds,
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
         }),
@@ -154,12 +156,12 @@ ${template.description || ''}`;
     }
   };
 
-  // メンバー選択が変わったら空き状況を確認
+  // 日時が変わったら全カレンダーの空き状況を確認
   useEffect(() => {
-    if (selectedMembers.length > 0 && session) {
+    if (calendars.length > 0 && session) {
       checkAvailability();
     }
-  }, [selectedMembers, selectedDate, selectedTime, session]);
+  }, [calendars, selectedDate, selectedTime, session]);
 
   const handleCreateEvent = async () => {
     if (!selectedTemplate || selectedMembers.length === 0 || !session) {
