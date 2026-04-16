@@ -41,10 +41,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 参加者のメールアドレスを取得
-    const attendees = sampleMembers
-      .filter(m => attendeeIds.includes(m.id))
-      .map(m => m.email);
+    // 参加者の情報を取得
+    const attendeeMembers = sampleMembers.filter(m => attendeeIds.includes(m.id));
+    const attendees = attendeeMembers.map(m => m.email);
 
     if (attendees.length === 0) {
       return NextResponse.json(
@@ -53,13 +52,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 参加者名を取得（複数の場合は最初の1人）
+    const attendeeName = attendeeMembers[0]?.name || '様';
+
+    // 説明文を生成
+    const description = `${attendeeName}様
+
+お世話になっております。
+テクノブレーン黒田です。
+
+以下日程で調整をさせていただきました。
+ご確認いただけますと幸いです。
+
+${template.description || ''}`;
+
     // イベントを作成
     const result = await createCalendarEvent(
       session.accessToken,
       'primary', // ログインユーザーのカレンダー
       {
         summary: customTitle || template.summary,
-        description: customDescription || template.description,
+        description: customDescription || description,
         location: customLocation || template.location,
         start: new Date(startTime),
         end: new Date(endTime),
