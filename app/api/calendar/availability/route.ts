@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getMultipleCalendarEvents } from '@/lib/utils/googleCalendar';
 import { checkMultipleAvailability } from '@/lib/utils/calendarUtils';
-import { sampleMembers } from '@/lib/data/sampleData';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,9 +27,8 @@ export async function POST(request: NextRequest) {
     const targetStart = new Date(startTime);
     const targetEnd = new Date(endTime);
 
-    // 対象メンバーを取得
-    const members = sampleMembers.filter(m => memberIds.includes(m.id));
-    const calendarIds = members.map(m => m.calendarId);
+    // memberIdsは実際にはカレンダーID（email）なので、そのまま使用
+    const calendarIds = memberIds;
 
     // カレンダーイベントを取得
     const eventsMap = await getMultipleCalendarEvents(
@@ -40,16 +38,24 @@ export async function POST(request: NextRequest) {
       targetEnd
     );
 
-    // メンバーIDをキーにしたMapに変換
+    // カレンダーIDごとの仮想メンバーを作成
+    const calendarsAsMembers = calendarIds.map(id => ({
+      id,
+      name: id,
+      email: id,
+      calendarId: id,
+    }));
+
+    // カレンダーIDをキーにしたMapを作成
     const memberEventsMap = new Map();
-    members.forEach(member => {
-      const events = eventsMap.get(member.calendarId) || [];
-      memberEventsMap.set(member.id, events);
+    calendarIds.forEach(calendarId => {
+      const events = eventsMap.get(calendarId) || [];
+      memberEventsMap.set(calendarId, events);
     });
 
     // 空き状況を確認
     const availability = checkMultipleAvailability(
-      members,
+      calendarsAsMembers,
       memberEventsMap,
       targetStart,
       targetEnd

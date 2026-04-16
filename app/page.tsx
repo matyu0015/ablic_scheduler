@@ -7,6 +7,15 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { signIn, signOut, useSession } from 'next-auth/react';
 
+interface CalendarItem {
+  id: string;
+  summary: string;
+  description?: string;
+  backgroundColor?: string;
+  foregroundColor?: string;
+  accessRole?: string;
+}
+
 export default function Home() {
   const { data: session, status } = useSession();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -20,6 +29,32 @@ export default function Home() {
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [customDescription, setCustomDescription] = useState<string>('');
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+
+  // カレンダーリストを取得
+  useEffect(() => {
+    const fetchCalendars = async () => {
+      if (!session) return;
+
+      setIsLoadingCalendars(true);
+      try {
+        const response = await fetch('/api/calendar/list');
+        if (response.ok) {
+          const data = await response.json();
+          setCalendars(data.calendars);
+        } else {
+          console.error('カレンダーリスト取得エラー');
+        }
+      } catch (error) {
+        console.error('カレンダーリスト取得エラー:', error);
+      } finally {
+        setIsLoadingCalendars(false);
+      }
+    };
+
+    fetchCalendars();
+  }, [session]);
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers(prev =>
@@ -34,8 +69,8 @@ export default function Home() {
     setSelectedTemplate(templateId);
     const template = eventTemplates.find(t => t.id === templateId);
     if (template && selectedMembers.length > 0) {
-      const attendeeMember = sampleMembers.find(m => selectedMembers.includes(m.id));
-      const attendeeName = attendeeMember?.name || '様';
+      const attendeeCalendar = calendars.find(c => selectedMembers.includes(c.id));
+      const attendeeName = attendeeCalendar?.summary || '様';
       const description = `${attendeeName}様
 
 お世話になっております。
@@ -66,8 +101,8 @@ ${template.description || ''}`;
     if (selectedTemplate && selectedMembers.length > 0) {
       const template = eventTemplates.find(t => t.id === selectedTemplate);
       if (template) {
-        const attendeeMember = sampleMembers.find(m => selectedMembers.includes(m.id));
-        const attendeeName = attendeeMember?.name || '様';
+        const attendeeCalendar = calendars.find(c => selectedMembers.includes(c.id));
+        const attendeeName = attendeeCalendar?.summary || '様';
         const description = `${attendeeName}様
 
 お世話になっております。
@@ -80,7 +115,7 @@ ${template.description || ''}`;
         setCustomDescription(description);
       }
     }
-  }, [selectedMembers]);
+  }, [selectedMembers, calendars]);
 
   // 空き状況を確認
   const checkAvailability = async () => {
@@ -324,48 +359,65 @@ ${template.description || ''}`;
                   </div>
                 )}
               </div>
-              <div className="space-y-3">
-                {sampleMembers.map(member => {
-                  const memberAvailability = availability.find(a => a.memberId === member.id);
-                  return (
-                    <label
-                      key={member.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedMembers.includes(member.id)}
-                        onChange={() => handleMemberToggle(member.id)}
-                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <div className="flex items-center space-x-3 flex-1">
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.name.charAt(0)}
+
+              {isLoadingCalendars ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">カレンダーを読み込み中...</p>
+                </div>
+              ) : calendars.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-600">
+                    閲覧・編集権限のあるカレンダーが見つかりませんでした。
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    他の人のGoogleカレンダーへのアクセス権限を確認してください。
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {calendars.map(calendar => {
+                    const memberAvailability = availability.find(a => a.memberId === calendar.id);
+                    return (
+                      <label
+                        key={calendar.id}
+                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMembers.includes(calendar.id)}
+                          onChange={() => handleMemberToggle(calendar.id)}
+                          className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex items-center space-x-3 flex-1">
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm"
+                            style={{ backgroundColor: calendar.backgroundColor || '#4285F4' }}
+                          >
+                            {calendar.summary.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{calendar.summary}</p>
+                            <p className="text-xs text-gray-500">{calendar.id}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{member.name}</p>
-                          <p className="text-sm text-gray-500">{member.email}</p>
-                        </div>
-                      </div>
-                      {/* 空き状況バッジ */}
-                      {memberAvailability && (
-                        <span
-                          className={`px-3 py-1 text-xs font-medium rounded-full ${
-                            memberAvailability.isAvailable
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {memberAvailability.isAvailable ? '空き' : '予定あり'}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
+                        {/* 空き状況バッジ */}
+                        {memberAvailability && (
+                          <span
+                            className={`px-3 py-1 text-xs font-medium rounded-full ${
+                              memberAvailability.isAvailable
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {memberAvailability.isAvailable ? '空き' : '予定あり'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* テンプレート選択 */}
@@ -450,11 +502,11 @@ ${template.description || ''}`;
                   {selectedMembers.length > 0 ? (
                     <div className="space-y-1">
                       {selectedMembers.map(id => {
-                        const member = sampleMembers.find(m => m.id === id);
+                        const calendar = calendars.find(c => c.id === id);
                         const memberAvailability = availability.find(a => a.memberId === id);
                         return (
                           <div key={id} className="flex items-center justify-between">
-                            <p className="text-sm text-gray-900">{member?.name}</p>
+                            <p className="text-sm text-gray-900">{calendar?.summary}</p>
                             {memberAvailability && (
                               <span
                                 className={`text-xs ${

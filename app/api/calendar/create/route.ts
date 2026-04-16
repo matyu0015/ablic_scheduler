@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { createCalendarEvent } from '@/lib/utils/googleCalendar';
-import { sampleMembers, eventTemplates } from '@/lib/data/sampleData';
+import { eventTemplates } from '@/lib/data/sampleData';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,9 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 参加者の情報を取得
-    const attendeeMembers = sampleMembers.filter(m => attendeeIds.includes(m.id));
-    const attendees = attendeeMembers.map(m => m.email);
+    // attendeeIdsは実際にはカレンダーID（email）なので、そのまま使用
+    const attendees = attendeeIds;
 
     if (attendees.length === 0) {
       return NextResponse.json(
@@ -55,7 +54,8 @@ export async function POST(request: NextRequest) {
     // 説明文を決定（カスタム文章が提供されていればそれを使用、なければデフォルトを生成）
     let description = providedCustomDescription;
     if (!description) {
-      const attendeeName = attendeeMembers[0]?.name || '様';
+      // カレンダーIDから名前を抽出（@の前の部分）
+      const attendeeName = attendees[0]?.split('@')[0] || '様';
       description = `${attendeeName}様
 
 お世話になっております。
