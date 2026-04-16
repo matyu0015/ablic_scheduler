@@ -39,8 +39,8 @@ export async function getCalendarEvents(
       start: new Date(event.start?.dateTime || event.start?.date || ''),
       end: new Date(event.end?.dateTime || event.end?.date || ''),
       attendees: event.attendees?.map(a => a.email || '') || [],
-      description: event.description,
-      location: event.location,
+      description: event.description || undefined,
+      location: event.location || undefined,
     }));
   } catch (error) {
     console.error('カレンダーイベント取得エラー:', error);
