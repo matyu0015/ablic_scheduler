@@ -25,19 +25,15 @@ export async function GET(request: NextRequest) {
 
     const calendars = response.data.items || [];
 
-    // 自分のプライマリカレンダー以外のカレンダーを抽出
-    const accessibleCalendars = calendars
-      .filter(cal => {
-        // プライマリカレンダーは除外
-        if (cal.primary) return false;
+    console.log('取得したカレンダー一覧:', calendars.map(c => ({
+      id: c.id,
+      summary: c.summary,
+      primary: c.primary,
+      accessRole: c.accessRole
+    })));
 
-        // 閲覧権限以上があるカレンダーのみ
-        const accessRole = cal.accessRole;
-        return accessRole === 'owner' ||
-               accessRole === 'writer' ||
-               accessRole === 'reader' ||
-               accessRole === 'freeBusyReader';
-      })
+    // 全てのカレンダーを表示（デバッグ用）
+    const accessibleCalendars = calendars
       .map(cal => ({
         id: cal.id || '',
         summary: cal.summary || cal.summaryOverride || '(名前なし)',
@@ -45,6 +41,7 @@ export async function GET(request: NextRequest) {
         backgroundColor: cal.backgroundColor,
         foregroundColor: cal.foregroundColor,
         accessRole: cal.accessRole,
+        isPrimary: cal.primary || false,
       }));
 
     return NextResponse.json({
